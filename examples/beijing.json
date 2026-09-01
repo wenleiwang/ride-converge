@@ -1,0 +1,12 @@
+{
+  "city": "北京",
+  "origins": [
+    {"name": "A", "address": "西二旗地铁站"},
+    {"name": "B", "address": "望京SOHO"},
+    {"name": "C", "address": "东直门地铁站"}
+  ],
+  "destination": "北京城市副中心三大文化建筑",
+  "max_detour_ratio": 0.15,
+  "route_corridor_m": 1500,
+  "top_n": 5
+}

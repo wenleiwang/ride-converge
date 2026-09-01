@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ride-converge"
+version = "0.5.0"
+description = "Find an early, route-compatible bicycle convergence point for riders sharing a destination."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "ride-converge contributors"}]
+keywords = ["cycling", "routing", "agent-skill", "amap", "meetpoint"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.scripts]
+ride-converge = "ride_converge.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ride_converge*"]
