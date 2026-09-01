@@ -19,7 +19,7 @@ class FakeProvider:
 
     def bicycle_route(self, origin, destination):
         self.route_calls += 1
-        # Natural routes merge around x=4 and destination follows the shared x-axis.
+        # 自然路线在 x=4 附近汇合，之后沿共同的 x 轴前往目的地。
         if destination == self.destination:
             d = max(0, (10 - origin.lng)) * 1000
             if origin.lng == 0:
@@ -105,7 +105,7 @@ class CoreTests(unittest.TestCase):
                 snap_to_poi=False,
             ),
         )
-        # 2 direct routes + at most 2 candidates * (1 shared + 2 riders)
+        # 2 条直达路线 + 最多 2 个候选点 *（1 条共同路线 + 2 名骑行者）
         self.assertLessEqual(p.route_calls, 8)
 
     def test_snaps_to_real_poi_and_revalidates_routes(self):
@@ -147,7 +147,7 @@ class DirectionAwareCorridorTests(unittest.TestCase):
         destination = Point(0.02, 0)
         routes = [
             Route(2200, 500, [Point(0, 0), destination]),
-            # Spatially close to the first route, but locally traveling west.
+            # 空间上接近第一条路线，但局部行进方向朝西。
             Route(5000, 900, [Point(0.02, 0.0001), Point(0, 0.0001), Point(0, -0.01), Point(0.02, -0.01), destination]),
         ]
         candidates = _candidate_points(
@@ -164,7 +164,7 @@ class DirectionAwareCorridorTests(unittest.TestCase):
                 max_candidates=30,
             ),
         )
-        # The nearby westbound section must not be mistaken for a shared eastbound corridor.
+        # 不得将附近向西行进的路段误判为共同向东走廊。
         self.assertTrue(all(c.point.lng > 0.017 for c in candidates))
 
     def test_accepts_same_direction_contiguous_corridor(self):

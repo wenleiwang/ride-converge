@@ -1,176 +1,176 @@
-# Algorithm reference
+# 算法参考
 
-## Problem
+## 问题定义
 
-Given riders with origins `S_i` and a common destination `D`, find an early practical convergence point `M` that stays close to the riders' natural bicycle routes and leaves a long shared ride `M -> D`.
+给定起点为 `S_i`、共同目的地为 `D` 的多名骑行者，寻找一个较早且实用的会合点 `M`。该点应接近每位骑行者的自然骑行路线，并在会合后留下较长的共同骑行路程 `M -> D`。
 
-The project is intentionally **path-first**: route compatibility and detour limits are hard constraints, not cosmetic score terms.
+本项目有意采用**路径优先**策略：路线兼容性和绕行限制是硬性约束，而非仅用于美化评分的因素。
 
-## 1. Direct-route baseline
+## 1. 直达路线基准
 
-For every rider, fetch the provider's recommended bicycle route:
+获取路线服务商为每位骑行者推荐的骑行路线：
 
 `R_i = route(S_i, D)`
 
-Keep distance, duration, and polyline. These routes define what "not meaningfully out of the way" means for each rider.
+保留距离、耗时和路线折线。这些路线定义了对每位骑行者而言，什么情况属于“没有明显绕远”。
 
-## 2. Direction-aware common-corridor detection (v0.4)
+## 2. 感知方向的共同走廊检测（v0.4）
 
-v0.4 samples the direct-route polylines at approximately even metric spacing. For every sampled point, it projects that point onto **every route segment**, rather than merely comparing it with route vertices.
+v0.4 以大致均匀的米制间距对直达路线折线进行采样。对于每个采样点，算法会将其投影到**每条路线的所有线段**上，而不是仅与路线顶点进行比较。
 
-For route `R_i`, the projection yields:
+对于路线 `R_i`，投影会得到：
 
-- `offset_i`: distance from candidate to the nearest route segment;
-- `remaining_i`: distance along that natural route from the projected position to `D`.
+- `offset_i`：候选点与最近路线线段之间的距离；
+- `remaining_i`：从投影位置沿该自然路线前往 `D` 的距离。
 
-A point belongs to the common corridor only when:
+仅当满足以下条件时，一个点才属于共同走廊：
 
 `max(offset_i) <= route_corridor_m`
 
-For each surviving point we record:
+对于每个保留下来的点，记录：
 
 `shared_remaining_floor = min(remaining_i)`
 
-This conservative value estimates how much natural route remains for **all** riders once they reach that corridor location.
+这个保守值用于估算所有骑行者到达该走廊位置后，**每个人**至少还剩多少自然路线。
 
-We also record:
+同时记录：
 
 `remaining_spread = max(remaining_i) - min(remaining_i)`
 
-A small spread means the point represents roughly the same stage of the trip on every rider's natural route.
+差值较小，表示该点在每位骑行者的自然路线中大致处于相同的行程阶段。
 
-### Direction compatibility
+### 方向兼容性
 
-Spatial proximity alone is insufficient. For each projected route position, v0.4 computes the local **forward** segment unit vector. For every pair of riders it measures the cosine similarity:
+仅有空间邻近还不够。对于每个投影后的路线位置，v0.4 会计算局部**前进方向**的单位向量，并测量每对骑行者之间的余弦相似度：
 
 `alignment(i,j) = dot(direction_i, direction_j)`
 
-Interpretation:
+数值含义如下：
 
-- `1.0`: same direction;
-- `0.0`: perpendicular;
-- `-1.0`: opposite direction.
+- `1.0`：方向相同；
+- `0.0`：方向垂直；
+- `-1.0`：方向相反。
 
-A candidate is rejected when the minimum pairwise alignment is below `min_direction_cosine` (default `0.65`, roughly a 49-degree maximum disagreement). This prevents an opposite-flow road from looking like a shared corridor merely because it is nearby.
+当骑行者两两之间的最小方向一致度低于 `min_direction_cosine` 时，候选点会被淘汰。默认值为 `0.65`，约等于最大方向差为 49 度。这样可防止方向相反的道路仅因距离较近而被误判为共同走廊。
 
-### Contiguous shared segment
+### 连续共同路段
 
-A single same-direction point can still be a transient crossing. v0.4 therefore advances forward along every natural route in metric steps. At every step:
+单个同向点也可能只是短暂的交叉。为此，v0.4 会沿每条自然路线以米制步长向前推进。在每一步中：
 
-1. the advanced route positions must remain within `route_corridor_m`; and
-2. their forward directions must still satisfy `min_direction_cosine`.
+1. 推进后的路线位置必须继续处于 `route_corridor_m` 范围内；
+2. 它们的前进方向必须继续满足 `min_direction_cosine`。
 
-The verified length is recorded as `contiguous_shared_m`. A candidate is rejected unless this persists for at least `min_contiguous_shared_m` (default `600 m`).
+验证通过的长度记录为 `contiguous_shared_m`。除非这种状态至少持续 `min_contiguous_shared_m`，否则候选点会被淘汰；默认要求为 `600 m`。
 
-This is still a geometric/navigation-polyline inference, not a claim that the provider exposes an identical physical road-segment ID. Exact routing through the meetup point remains the final detour validation.
+这仍然是根据几何形状和导航路线折线进行的推断，并不表示路线服务商提供了相同的实际道路路段标识。最终仍需使用经过会合点的精确路线验证绕行距离。
 
-## 3. Convergence zones
+## 3. 会合区域
 
-Dense neighboring common-corridor samples are clustered using `zone_radius_m`. Within each zone, the earliest compatible point is retained.
+使用 `zone_radius_m` 将邻近且密集的共同走廊采样点分组。在每个区域内，保留最早出现的兼容点。
 
-This has two benefits:
+这样做有两个好处：
 
-1. it represents the **first entry into a shared corridor** instead of returning many nearly identical later points;
-2. it dramatically reduces expensive route API validation calls.
+1. 表示**首次进入共同走廊的位置**，避免返回大量近乎相同的后续点；
+2. 显著减少成本较高的路线 API 验证请求。
 
-Zones are pre-ranked by:
+区域预排序依次考虑：
 
-1. larger `shared_remaining_floor`;
-2. smaller route-corridor width;
-3. stronger direction alignment;
-4. longer contiguous shared corridor;
-5. smaller natural-route remaining-distance spread.
+1. 更大的 `shared_remaining_floor`；
+2. 更小的路线走廊宽度；
+3. 更高的方向一致度；
+4. 更长的连续共同走廊；
+5. 更小的自然路线剩余距离差值。
 
-Only the first `validation_candidates` zones are sent to exact navigation validation.
+只有前 `validation_candidates` 个区域会进入精确导航验证。
 
-## 4. Exact detour validation
+## 4. 精确绕行验证
 
-For each candidate `M`, fetch:
+对于每个候选点 `M`，获取：
 
-- `route(M, D)` once;
-- `route(S_i, M)` for every rider.
+- 一次 `route(M, D)`；
+- 每位骑行者各一次 `route(S_i, M)`。
 
-For rider `i`:
+对于骑行者 `i`：
 
 `via_i = distance(S_i, M) + distance(M, D)`
 
 `detour_i = max(0, (via_i - direct_i) / direct_i)`
 
-Reject `M` if any:
+如果任何骑行者满足以下条件，则淘汰 `M`：
 
 `detour_i > max_detour_ratio`
 
-This remains the hard safety rail against geometrically plausible but practically bad meeting points.
+这仍然是一项硬性保障，用于排除几何上看似合理、实际路线却很差的会合点。
 
-## 5. Final ranking
+## 5. 最终排序
 
-All remaining candidates already satisfy route and detour constraints. Rank lexicographically:
+所有剩余候选点均已满足路线和绕行约束。按以下条件进行字典序排序：
 
-1. larger actual `distance(M, D)` — maximize the shared ride;
-2. smaller maximum rider detour;
-3. smaller arrival-duration spread;
-4. smaller route-corridor width;
-5. stronger direction alignment;
-6. longer contiguous shared corridor;
-7. named POI preferred over a raw route coordinate on ties.
+1. 更大的实际 `distance(M, D)`，即最大化共同骑行路程；
+2. 更小的骑行者最大绕行比例；
+3. 更小的到达耗时差；
+4. 更小的路线走廊宽度；
+5. 更高的方向一致度；
+6. 更长的连续共同走廊；
+7. 条件相同时，优先选择有名称的兴趣点，而非原始路线坐标。
 
-No opaque weighted score is required.
+无需使用含义不透明的加权评分。
 
-## 6. Practical POI snapping
+## 6. 实用兴趣点吸附
 
-A mathematically good coordinate may be awkward for a group to stop at. For the best raw convergence points:
+数学意义上良好的坐标未必适合团队停留。对于排名靠前的原始会合点：
 
-1. search nearby POIs;
-2. deduplicate close/repeated places;
-3. verify that each POI remains in the natural common corridor;
-4. re-run all required bicycle routes through that exact POI;
-5. re-apply the same detour constraint;
-6. rank only the feasible places.
+1. 搜索附近的兴趣点；
+2. 对邻近或重复的地点去重；
+3. 验证每个兴趣点仍位于自然路线共同走廊内；
+4. 重新查询经过该兴趣点的所有必要骑行路线；
+5. 再次应用相同的绕行约束；
+6. 只对可行地点进行排序。
 
-A POI is never merely a renamed coordinate.
+兴趣点绝不只是改了名称的坐标。
 
-## 7. Departure-time synchronization (v0.5)
+## 7. 出发时间同步（v0.5）
 
-Departure planning runs **after** a convergence point has been selected, so it does not change route ranking or detour feasibility.
+出发规划在选定会合点**之后**执行，因此不会改变路线排序或绕行可行性。
 
-Given a desired local meetup-ready time `T`, an arrival buffer `B`, and exact routed duration `duration_i = route(S_i, M).duration`:
+给定期望的本地会合就绪时间 `T`、提前到达缓冲 `B`，以及精确的路线耗时 `duration_i = route(S_i, M).duration`：
 
 `expected_arrival_i = T - B`
 
 `recommended_departure_i = expected_arrival_i - duration_i`
 
-For a conservative planning suggestion, define:
+如需给出更保守的规划建议，定义：
 
 `planning_allowance_i = max(minimum_slack, duration_i * pace_slack)`
 
 `latest_safe_departure_i = recommended_departure_i - planning_allowance_i`
 
-The planning allowance is intentionally **not** represented as a statistical confidence interval. AMap route duration is treated as an ETA estimate; the extra cushion is controlled by the caller.
+规划余量有意**不**表示为统计置信区间。高德地图路线耗时仅作为预计到达时间，额外缓冲由调用方控制。
 
-All CLI timestamps are interpreted as local ISO datetimes. Time-zone conversion is deliberately outside the routing core; callers that coordinate riders across zones should pass an offset-aware `datetime` through the Python API.
+所有命令行时间戳均按本地 ISO 日期时间解释。时区转换被有意排除在路线规划核心之外；如果调用方需要协调不同时区的骑行者，应通过 Python 编程接口传入包含时区偏移的 `datetime`。
 
-## API-call control
+## API 调用控制
 
-The expensive part is exact route validation. v0.4 therefore separates cheap geometric corridor detection from expensive provider requests.
+成本最高的部分是精确路线验证。因此，v0.4 将低成本的几何走廊检测与高成本的路线服务商请求分开。
 
-Approximate raw validation calls are bounded by:
+原始验证请求次数大致受以下公式限制：
 
 `direct_routes + validation_candidates * (riders + 1)`
 
-before optional POI validation. Providers may additionally cache identical route/geocode/POI requests.
+之后才会执行可选的兴趣点验证。路线服务商还可以缓存相同的路线、地址解析和兴趣点请求。
 
-## Current limitations
+## 当前限制
 
-- Corridor projection uses a local equirectangular approximation, intended for city/regional cycling rather than intercontinental geometry.
-- Direction compatibility is inferred from navigation polylines; without provider road-segment IDs it cannot prove that nearby same-direction lines are the exact same physical lane/road.
-- Riders are assumed to use the provider's recommended bicycle route.
-- POI suitability is category/name based; opening hours and bike parking are not yet considered.
-- Departure synchronization uses static route ETA; it does not yet model live speed profiles, rider-specific pace, weather, or traffic uncertainty distributions.
+- 走廊投影使用局部等距圆柱近似，适合城市和区域骑行，不适合洲际尺度的几何计算。
+- 方向兼容性根据导航路线折线推断；如果路线服务商不提供道路路段标识，就无法证明邻近且同向的路线确实位于同一条实际车道或道路上。
+- 默认骑行者使用路线服务商推荐的骑行路线。
+- 兴趣点适用性目前根据类别和名称判断，尚未考虑营业时间和自行车停放设施。
+- 出发时间同步使用静态路线预计耗时，尚未模拟实时速度、骑行者个人配速、天气或交通不确定性分布。
 
-## Candidate future improvements
+## 后续改进方向
 
-- persistent route cache;
-- explicit route-request budget exposed by providers;
-- optional rider-specific pace/speed profiles and dynamic ETA refresh;
-- bike-parking / rest-stop preference filters;
-- additional map providers.
+- 持久化路线缓存；
+- 由路线服务商明确提供路线请求预算；
+- 可选的骑行者个人配速或速度配置，以及动态刷新预计到达时间；
+- 自行车停放或休息点偏好筛选；
+- 支持更多地图服务商。

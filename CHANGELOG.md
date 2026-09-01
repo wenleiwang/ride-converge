@@ -1,40 +1,40 @@
-# Changelog
+# 更新日志
 
 ## 0.5.0
 
-- Add synchronized departure planning for a target meetup-ready time.
-- Back-calculate each rider's nominal departure from exact routed time to the selected meetup point.
-- Add configurable early-arrival buffer with `--arrival-buffer`.
-- Add conservative planning allowance with `--pace-slack` and `--min-pace-slack`.
-- Add `departure_plan` to JSON output without changing convergence ranking.
-- Export `plan_departures`, `DeparturePlan`, and `RiderDeparture` through the Python API.
-- Add departure-planning tests; suite now covers 13 cases.
+- 新增面向目标会合就绪时间的同步出发规划。
+- 根据前往选定会合点的精确路线耗时，反推每位骑行者的常规出发时间。
+- 通过 `--arrival-buffer` 新增可配置的提前到达缓冲时间。
+- 通过 `--pace-slack` 和 `--min-pace-slack` 新增保守的规划余量。
+- 在不改变会合结果排序的前提下，为 JSON 输出新增 `departure_plan`。
+- 通过 Python 编程接口导出 `plan_departures`、`DeparturePlan` 和 `RiderDeparture`。
+- 新增出发规划测试；测试套件现已覆盖 13 种情况。
 
 ## 0.4.0
 
-- Add direction-aware route-corridor filtering using local forward segment vectors.
-- Reject spatially close natural routes that travel in incompatible/opposite directions.
-- Require a configurable contiguous same-direction shared corridor after each candidate.
-- Add `--min-direction-cosine` and `--min-shared-segment` CLI controls.
-- Expose `direction_alignment` and `contiguous_shared_m` diagnostics in text/JSON output.
-- Add opposite-direction and same-direction-continuity tests; suite now covers 10 cases.
+- 使用局部前进方向向量，新增感知方向的路线走廊筛选。
+- 淘汰空间邻近但行进方向不兼容或相反的自然路线。
+- 要求每个候选点之后存在长度可配置、同向且连续的共同走廊。
+- 新增命令行参数 `--min-direction-cosine` 和 `--min-shared-segment`。
+- 在文本和 JSON 输出中提供 `direction_alignment` 与 `contiguous_shared_m` 诊断数据。
+- 新增反向路线和同向连续性测试；测试套件现已覆盖 10 种情况。
 
 ## 0.3.0
 
-- Detect common route corridors using point-to-segment projection instead of vertex-only proximity.
-- Track remaining natural-route distance for every rider and prioritize the earliest shared corridor.
-- Cluster dense samples into convergence zones before expensive routing validation.
-- Add `validation_candidates` to bound raw candidate route calls.
-- Improve polyline sampling with interpolation at roughly even metric spacing.
-- Expose natural-corridor diagnostics in JSON/text output.
-- Add geometry and route-budget tests.
+- 使用点到线段投影而非仅比较顶点的方式检测共同路线走廊。
+- 跟踪每位骑行者自然路线的剩余距离，并优先选择最早的共同走廊。
+- 在执行成本较高的路线验证前，将密集采样点合并为会合区域。
+- 新增 `validation_candidates`，限制原始候选点的路线查询次数。
+- 通过大致均匀的米制插值采样，改进路线折线采样。
+- 在 JSON 和文本输出中提供自然路线走廊诊断数据。
+- 新增几何计算和路线查询预算测试。
 
 ## 0.2.0
 
-- Snap feasible route points to nearby real POIs and fully revalidate bicycle routes.
-- Add provider request caches and POI controls.
-- Improve AMap error handling.
+- 将可行路线点吸附到附近真实的兴趣点，并重新进行完整的骑行路线验证。
+- 新增路线服务商请求缓存和兴趣点控制参数。
+- 改进高德地图错误处理。
 
 ## 0.1.0
 
-- Initial path-first convergence search with detour constraints and AMap bicycle routing.
+- 首次实现路径优先的会合搜索，支持绕行约束和高德地图骑行路线。

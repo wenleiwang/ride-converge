@@ -1,161 +1,161 @@
 ---
 name: ride-converge
-description: Find an early practical bicycle convergence point for two or more riders who share a final destination. Use when riders want to meet as early as possible while staying close to their natural cycling routes, limiting detours, and maximizing the distance they can ride together afterward. Supports path-first routing with AMap/Gaode.
+description: 为前往同一最终目的地的两名或更多骑行者寻找较早且实用的会合点。适用于骑行者希望尽早会合，同时贴近各自的自然骑行路线、限制绕行距离，并最大化会合后共同骑行路程的场景。支持通过高德地图进行路径优先的路线规划。
 license: MIT
-compatibility: Requires Python 3.10+, network access, and an AMap Web Service API key in AMAP_API_KEY for live routing.
+compatibility: 实时路线规划需要 Python 3.10 或更高版本、网络连接，以及通过 AMAP_API_KEY 设置的高德地图 Web 服务 API 密钥。
 metadata:
   version: "0.5.0"
   provider: "amap"
 ---
 
-# Ride Converge
+# 骑行会合规划
 
-Find a route-compatible bicycle convergence point for riders heading to one shared destination.
+为前往同一个目的地的骑行者寻找路线兼容的会合点。
 
-The objective is **not** to find a geometric midpoint. The objective is to find the earliest practical place where riders' natural routes can converge without forcing excessive detours, so the group has as much shared riding as possible after meeting.
+目标**不是**寻找几何中点，而是寻找骑行者自然路线能够尽早汇合、同时不会迫使任何人过度绕行的实用地点，从而让团队在会合后拥有尽可能长的共同骑行路程。
 
-## When to use
+## 适用场景
 
-Use this skill when the user provides or can provide:
+当用户提供或能够提供以下信息时使用本技能：
 
-- two or more rider origins;
-- one shared cycling destination;
-- a desire to meet before the destination;
-- bicycle routing as the preferred mode.
+- 两名或更多骑行者的起点；
+- 一个共同的骑行目的地；
+- 希望在抵达目的地前会合；
+- 将骑行作为首选出行方式。
 
-Typical requests include:
+典型请求包括：
 
-- "我们从不同地方出发，最后骑去十三陵，找一个尽量早汇合的点。"
-- "不要让任何人绕太远，但汇合后想一起多骑一段。"
-- "按实际骑行路线找汇流点，不要按直线中点。"
+- “我们从不同地方出发，最后都去十渡，找一个尽早汇合的点。”
+- “不要让任何人绕太远，会合后想一起多骑一段。”
+- “按实际骑行路线找会合点，不要按直线中点。”
 
-Do not use straight-line distance as the final ranking method.
+不要使用直线距离作为最终排序方式。
 
-## Default policy
+## 默认策略
 
-Unless the user specifies otherwise:
+除非用户另有指定，否则采用以下设置：
 
-- maximum detour per rider: `15%`;
-- natural-route corridor: `1500 m`;
-- return top `5` candidates;
-- optimize lexicographically rather than with arbitrary weights.
+- 每位骑行者的最大绕行比例：`15%`；
+- 自然路线走廊宽度：`1500 m`；
+- 返回前 `5` 个候选点；
+- 使用字典序优化，不采用任意权重。
 
-Ranking order:
+排序顺序如下：
 
-1. Candidate must be near every rider's natural route to the shared destination.
-2. Natural routes must be direction-compatible and remain in a contiguous shared corridor after the candidate.
-3. Candidate must keep every rider's total route within the maximum detour constraint.
-4. Maximize `candidate -> destination` cycling distance (shared ride).
-5. Minimize worst rider detour.
-6. Minimize arrival-time spread.
-7. Prefer tighter overlap with the riders' natural-route corridors.
+1. 候选点必须接近每位骑行者前往共同目的地的自然路线。
+2. 自然路线必须方向兼容，并在候选点后保持为连续的共同走廊。
+3. 每位骑行者经过候选点的总路线都必须满足最大绕行约束。
+4. 最大化 `候选点 -> 目的地` 的骑行距离，即共同骑行路程。
+5. 最小化绕行比例最高者的绕行比例。
+6. 最小化到达时间差。
+7. 优先选择与所有骑行者自然路线走廊重合更紧密的候选点。
 
-## Workflow
+## 工作流程
 
-1. Resolve each origin and the shared destination to coordinates.
-2. Fetch each rider's natural bicycle route directly to the destination.
-3. Sample the real route polylines at roughly even metric spacing.
-4. Project samples onto every rider's route segments and keep only points inside the shared route corridor.
-5. Compare the local forward direction of every route and reject opposite/diverging route segments.
-6. Scan forward from each candidate and require a contiguous same-direction shared corridor (default at least 600 m).
-7. Estimate remaining natural-route distance for every rider, cluster nearby samples into convergence zones, and prioritize the earliest shared zones.
-8. Exact-route only a bounded number of the best zones. For each candidate, fetch real bicycle routes:
-   - each `origin -> candidate`;
-   - `candidate -> destination`.
-9. Calculate each rider's detour:
+1. 将每个起点和共同目的地解析为坐标。
+2. 获取每位骑行者直接前往目的地的自然骑行路线。
+3. 以大致均匀的米制间距对真实路线折线进行采样。
+4. 将采样点投影到每位骑行者的所有路线线段上，只保留共同路线走廊内的点。
+5. 比较每条路线的局部前进方向，淘汰方向相反或逐渐分离的路线段。
+6. 从每个候选点向前扫描，要求存在同向且连续的共同走廊，默认至少为 `600 m`。
+7. 估算每位骑行者自然路线的剩余距离，将邻近采样点合并为会合区域，并优先选择最早的共同区域。
+8. 仅对数量有限且排名靠前的区域执行精确路线查询。对于每个候选点，获取真实骑行路线：
+   - 每条 `起点 -> 候选点` 路线；
+   - `候选点 -> 目的地` 路线。
+9. 计算每位骑行者的绕行比例：
 
    `detour = (route(origin, candidate) + route(candidate, destination) - route(origin, destination)) / route(origin, destination)`
 
-10. Reject a candidate if any rider exceeds the detour limit.
-11. Rank feasible route points by shared-route distance first, then detour and arrival fairness.
-12. Search nearby practical POIs (by default parks, plazas, convenience stores, and coffee shops).
-13. Treat each POI as a new candidate and re-run real bicycle routes; never accept a POI merely because it is geographically close.
-14. Prefer validated named POIs; fall back to a route coordinate when no POI passes the hard constraints.
-15. If the user gives a desired meetup-ready time, back-calculate synchronized departure times from each rider's exact `origin -> meetup` navigation duration. Apply any requested early-arrival buffer. Treat pace/traffic slack as a planning allowance, not a provider-guaranteed ETA confidence interval.
-16. Return concise reasoning explaining why the top candidate is preferable and, when requested, when each rider should depart.
+10. 如果任何骑行者超过绕行上限，则淘汰该候选点。
+11. 首先按共同路线距离对可行路线点排序，之后考虑绕行比例和到达公平性。
+12. 搜索附近实用的兴趣点，默认包括公园、广场、便利店和咖啡店。
+13. 将每个兴趣点视为新的候选点，并重新查询真实骑行路线；绝不能仅因为兴趣点在地理上邻近就接受它。
+14. 优先选择通过验证且有名称的兴趣点；如果没有兴趣点满足硬性约束，则回退到路线坐标。
+15. 如果用户给出期望的会合就绪时间，则根据每位骑行者准确的 `起点 -> 会合点` 导航耗时反推同步出发时间，并应用用户要求的提前到达缓冲。配速或交通缓冲应视为规划余量，而非路线服务商保证的预计到达时间置信区间。
+16. 用简洁的理由说明首选候选点为何更合适；如果用户要求，还要说明每位骑行者应在何时出发。
 
-## Running the bundled implementation
+## 运行随附实现
 
-Set the API key:
+设置 API 密钥：
 
 ```bash
-export AMAP_API_KEY="your-web-service-key"
+export AMAP_API_KEY="你的 Web 服务密钥"
 ```
 
-Install locally:
+在本地安装：
 
 ```bash
 python -m pip install -e .
 ```
 
-Run:
+运行：
 
 ```bash
 ride-converge \
   --city 北京 \
-  --origin 'Alice=西二旗地铁站' \
-  --origin 'Bob=望京SOHO' \
-  --origin 'Carol=东直门地铁站' \
+  --origin '小李=西二旗地铁站' \
+  --origin '小王=望京SOHO' \
+  --origin '小张=东直门地铁站' \
   --destination '北京城市副中心三大文化建筑' \
   --max-detour 0.15 \
   --top 5
 ```
 
-POI snapping is enabled by default. Use `--no-poi` to return raw route points, or repeat `--poi-keyword` to customize suitable meetup-place searches.
+默认启用兴趣点吸附。使用 `--no-poi` 可返回原始路线点，也可以重复指定 `--poi-keyword` 来自定义适合作为会合地点的搜索关键词。
 
-For structured output, add `--json`.
+如需结构化输出，请添加 `--json`。
 
-The equivalent script is `scripts/find_convergence.py`.
+等效脚本为 `scripts/find_convergence.py`。
 
-## Interpreting results
+## 结果解读
 
-Prefer explanations such as:
+优先采用以下说明方式：
 
-- "This point is already close to all riders' natural routes."
-- "No rider detours more than 11%."
-- "Meeting here leaves about 24 km of shared riding to the destination."
-- "Moving the meeting point earlier would push one rider above the detour limit."
-- "The final coordinate was snapped to a nearby named POI and revalidated with bicycle routing."
+- “该点已经接近所有骑行者的自然路线。”
+- “所有人的绕行比例都不超过 11%。”
+- “在此会合后，前往目的地还有约 24 公里的共同骑行路程。”
+- “如果把会合点提前，其中一名骑行者将超过绕行上限。”
+- “最终坐标已吸附到附近有名称的兴趣点，并重新通过骑行路线验证。”
 
-Avoid saying a point is optimal merely because it is geographically central.
+不要仅因为某个点在地理位置上居中，就称其为最优点。
 
-## Constraint adjustments
+## 调整约束
 
-If there is no feasible result:
+如果没有可行结果：
 
-1. first increase `--corridor` moderately (for example 1500 -> 2500 m);
-2. then consider increasing `--max-detour` (for example 0.15 -> 0.20);
-3. explain that the riders' natural routes may not converge early enough under the original constraints.
+1. 首先适度增大 `--corridor`，例如从 `1500 m` 增加到 `2500 m`；
+2. 然后考虑增大 `--max-detour`，例如从 `0.15` 增加到 `0.20`；
+3. 说明在原始约束下，骑行者的自然路线可能无法足够早地汇合。
 
-Never silently relax the user's stated detour limit.
+绝不能在未告知用户的情况下放宽其指定的绕行上限。
 
-## Safety and API-key handling
+## 安全和 API 密钥处理
 
-- Never print, echo, commit, or include `AMAP_API_KEY` in output.
-- Do not put API keys in `SKILL.md`, examples, source files, or logs.
-- Treat route-provider failures as failures; do not silently substitute straight-line distance.
+- 绝不能打印、回显、提交 `AMAP_API_KEY`，也不能将其包含在输出中。
+- 不要将 API 密钥放入 `SKILL.md`、示例、源文件或日志中。
+- 路线服务商请求失败时应明确作为失败处理，不能悄悄改用直线距离。
 
-## Technical reference
+## 技术参考
 
-See `references/ALGORITHM.md` for the optimization model and implementation notes.
+优化模型和实现说明请参阅 `references/ALGORITHM.md`。
 
-## v0.4 direction-aware path-first behavior
+## v0.4 感知方向的路径优先行为
 
-Before spending route calls on candidate meeting points, detect the earliest **same-direction contiguous** route corridor across all direct bicycle routes. A point is not enough: local segment directions must agree and the routes must continue close together for a configurable minimum distance. Reject nearby parallel/opposite traffic flows when their directions are incompatible. Then exact-route only the best bounded convergence zones. Never fall back to geometric midpoint ranking when route polylines are available.
+在对候选会合点发起路线请求之前，先在所有直达骑行路线中检测最早的**同向连续**路线走廊。仅有一个点还不够：局部线段方向必须一致，并且路线必须在可配置的最短距离内持续保持邻近。当附近的平行或反向交通流方向不兼容时，应将其淘汰。之后，只对数量有限且排名靠前的会合区域执行精确路线查询。只要路线折线可用，就绝不能回退到几何中点排序。
 
-## v0.5 departure synchronization
+## v0.5 出发时间同步
 
-When the user provides a target time to be ready together at the meetup point, use the bundled departure planner after choosing a convergence result. For rider `i`:
+当用户给出在会合点共同准备就绪的目标时间时，应先选定会合结果，再使用随附的出发规划器。对于骑行者 `i`：
 
 `recommended_departure_i = meetup_at - arrival_buffer - route_duration(S_i, M)`
 
-Optionally show a more conservative departure using a configurable planning allowance:
+还可以使用可配置的规划余量，给出更保守的出发时间：
 
 `latest_safe_departure_i = recommended_departure_i - max(minimum_slack, route_duration * pace_slack)`
 
-The planning allowance is deliberately described as a user-configurable cushion, not as a statistical ETA uncertainty supplied by AMap.
+规划余量必须描述为用户可配置的缓冲，而不是高德地图提供的统计预计到达时间不确定性。
 
-CLI example:
+命令行示例：
 
 ```bash
 ride-converge ... \

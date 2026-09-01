@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ride-converge"
 version = "0.5.0"
-description = "Find an early, route-compatible bicycle convergence point for riders sharing a destination."
+description = "为前往同一目的地的骑行者寻找较早且路线兼容的会合点。"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-authors = [{name = "ride-converge contributors"}]
+authors = [{name = "ride-converge 贡献者"}]
 keywords = ["cycling", "routing", "agent-skill", "amap", "meetpoint"]
 classifiers = [
   "Programming Language :: Python :: 3",

@@ -1,8 +1,8 @@
 # ride-converge
 
-**Path-first meetup planning for cyclists heading to one shared destination.**
+**面向骑行者的路径优先会合规划：让多名骑行者前往同一个目的地。**
 
-Instead of finding a geographic midpoint, `ride-converge` finds an early practical convergence point along the riders' real cycling routes, limits individual detours, and maximizes how far the group can ride together afterward.
+`ride-converge` 不会简单寻找地理中点，而是沿骑行者的实际骑行路线寻找较早且实用的会合点，在限制每个人绕行距离的同时，尽可能增加会合后共同骑行的路程。
 
 ```text
 A ---------\\
@@ -11,61 +11,61 @@ B -----------● M ===================> D
             /
 C ----------/
 
-             <---- shared ride ---->
+             <---- 共同骑行 ---->
 ```
 
-The default optimization is:
+默认优化目标为：
 
-> maximize shared cycling distance, subject to route compatibility and a per-rider detour limit.
+> 在满足路线兼容性和每位骑行者绕行上限的前提下，最大化共同骑行距离。
 
-## Why this is different from a midpoint
+## 与寻找中点有何不同
 
-A geometric midpoint ignores rivers, ring roads, bicycle restrictions and the actual shape of each rider's route. This project starts from each rider's real bicycle route to the final destination and searches for convergence candidates around those paths.
+几何中点不会考虑河流、环路、自行车通行限制，以及每位骑行者实际路线的形状。本项目以每位骑行者前往最终目的地的真实骑行路线为基础，在这些路径周围搜索会合候选点。
 
-## v0.5 highlights
+## 亮点
 
-- Adds **departure-time synchronization** for a chosen convergence result.
-- Accepts a local target time when the group wants to be ready together at the meetup point.
-- Back-calculates each rider's departure from the exact routed `origin -> meetup` duration.
-- Supports an early-arrival buffer and a separate configurable planning allowance.
-- Exposes both the nominal recommended departure and a more conservative `latest_safe_departure_at`.
-- Keeps v0.4 direction-aware, contiguous shared-corridor detection and POI revalidation.
+- 为选定的会合结果新增**出发时间同步**功能。
+- 支持设置团队希望在会合点准备就绪的本地目标时间。
+- 根据每位骑行者准确的 `起点 -> 会合点` 路线耗时，反推出发时间。
+- 支持提前到达缓冲时间，以及单独配置的行程规划余量。
+- 同时提供常规建议出发时间和更保守的 `latest_safe_departure_at`。
+- 保留 v0.4 中方向感知、连续共同行驶走廊检测和兴趣点重新验证功能。
 
-## Features
+## 功能特性
 
-- Real bicycle routing through AMap/Gaode Web Service API.
-- Multiple riders and one shared destination.
-- Path-first, direction-aware candidate generation from navigation polylines.
-- Hard maximum-detour constraint per rider.
-- Maximizes the shared `meeting point -> destination` route.
-- Arrival-time fairness as a tie-breaker.
-- Optional synchronized departure planning for a target meetup-ready time.
-- Practical POI snapping with full route re-validation.
-- Agent Skills-compatible `SKILL.md`.
-- CLI and Python API.
-- No third-party Python runtime dependencies.
+- 通过高德地图 Web 服务 API 获取真实骑行路线。
+- 支持多名骑行者前往同一个目的地。
+- 根据导航路线折线，以路径优先且感知方向的方式生成候选点。
+- 为每位骑行者设置严格的最大绕行限制。
+- 最大化从 `会合点 -> 目的地` 的共同骑行路程。
+- 使用到达时间公平性作为排序时的决胜条件。
+- 可根据目标会合就绪时间规划同步出发时间。
+- 将候选点吸附到实用的兴趣点，并重新进行完整路线验证。
+- 提供与 Agent Skills 兼容的 `SKILL.md`。
+- 提供命令行界面和 Python API。
+- Python 运行时不依赖第三方软件包。
 
-## Requirements
+## 使用要求
 
-- Python 3.10+
-- An AMap Web Service API key
-- Internet access for live routing
+- Python 3.10 或更高版本
+- 高德地图 Web 服务 API 密钥
+- 实时路线规划所需的互联网连接
 
 ```bash
 export AMAP_API_KEY="..."
 ```
 
-Do not commit the key.
+请勿将密钥提交到版本库。
 
-## Install
+## 安装
 
 ```bash
-git clone <your-repo-url>
+git clone <你的仓库地址>
 cd ride-converge
 python -m pip install -e .
 ```
 
-## CLI example
+## 命令行示例
 
 ```bash
 ride-converge \
@@ -79,7 +79,7 @@ ride-converge \
   --top 5
 ```
 
-Customize meetup POIs:
+自定义会合点兴趣点：
 
 ```bash
 ride-converge ... \
@@ -89,21 +89,21 @@ ride-converge ... \
   --poi-keyword 便利店
 ```
 
-Disable POI snapping:
+禁用兴趣点吸附：
 
 ```bash
 ride-converge ... --no-poi
 ```
 
-Structured output:
+输出结构化数据：
 
 ```bash
 ride-converge ... --json
 ```
 
-### Departure synchronization
+### 出发时间同步
 
-If the group wants to be ready together at a specific local time:
+如果团队希望在指定的本地时间一起准备就绪：
 
 ```bash
 ride-converge \
@@ -117,17 +117,17 @@ ride-converge \
   --min-pace-slack 2
 ```
 
-`--meet-at` is the time the group wants to be ready at the meetup point. The default 3-minute arrival buffer plans each rider to arrive at 09:12 in this example. `--pace-slack` and `--min-pace-slack` produce an additional conservative departure suggestion; this is a planning cushion, **not** a provider-guaranteed ETA confidence interval.
+`--meet-at` 表示团队希望在会合点准备就绪的时间。本例使用默认的 3 分钟提前到达缓冲，因此会为每位骑行者规划在 09:12 到达。`--pace-slack` 和 `--min-pace-slack` 会额外生成一个更保守的出发时间建议；这是一项规划缓冲，**并非**路线服务商保证的预计到达时间置信区间。
 
-Example interpretation:
+示例解读：
 
 ```text
-A: depart 08:42 (safer 08:39 with 3 min planning allowance)
-B: depart 08:52 (safer 08:50 with 2 min planning allowance)
-ready together: 09:15
+A：08:42 出发（更稳妥的建议：08:39，包含 3 分钟规划余量）
+B：08:52 出发（更稳妥的建议：08:50，包含 2 分钟规划余量）
+共同准备就绪时间：09:15
 ```
 
-## Python API
+## Python 编程接口
 
 ```python
 from ride_converge import Options, Rider, find_convergence
@@ -161,9 +161,9 @@ for rider in plan.riders:
     print(rider.name, rider.recommended_departure_at)
 ```
 
-## Optimization model
+## 优化模型
 
-For rider `i`:
+对于骑行者 `i`：
 
 ```text
 direct_i = route(S_i -> D)
@@ -171,51 +171,51 @@ via_i    = route(S_i -> M) + route(M -> D)
 detour_i = (via_i - direct_i) / direct_i
 ```
 
-A candidate is rejected when:
+出现以下情况时，候选点会被淘汰：
 
 ```text
-max(detour_i) > configured detour limit
+max(detour_i) > 配置的绕行上限
 ```
 
-Among feasible route-compatible candidates, the sorter prioritizes:
+在路线兼容且满足约束的候选点中，排序会依次优先考虑：
 
-1. maximum shared riding distance `M -> D`;
-2. minimum worst-rider detour;
-3. minimum rider arrival-time spread;
-4. tighter proximity to all natural routes;
-5. stronger same-direction / contiguous-corridor evidence on ties.
+1. 最大化共同骑行距离 `M -> D`；
+2. 最小化绕行比例最高者的绕行比例；
+3. 最小化骑行者到达时间的差距；
+4. 更接近所有人的自然路线；
+5. 若其他条件相同，优先选择同向性和连续走廊依据更充分的候选点。
 
-POI snapping is a second pass. Nearby named places are treated as new candidates and must pass the same route-corridor and detour constraints.
+兴趣点吸附是第二阶段处理。附近有名称的地点会被视为新的候选点，并且必须通过相同的路线走廊和绕行约束验证。
 
-See [`references/ALGORITHM.md`](references/ALGORITHM.md) for details.
+详细信息请参阅 [`references/ALGORITHM.md`](references/ALGORITHM.md)。
 
-## API usage note
+## API 使用说明
 
-A raw candidate evaluation requires roughly `N + 1` route lookups for `N` riders. POI snapping adds another bounded candidate pass. v0.3 uses in-process caching and conservative candidate limits, but a hosted service should still add persistent caching, quotas and per-request budgets.
+对于 `N` 名骑行者，评估一个原始候选点大约需要查询 `N + 1` 次路线。兴趣点吸附还会增加一次有数量上限的候选点处理。v0.3 已使用进程内缓存并对候选点数量设置保守上限，但托管服务仍应加入持久化缓存、配额和单次请求预算。
 
-## Testing
+## 测试
 
-Tests use a deterministic fake router and fake POI search and require no API key:
+测试使用确定性的模拟路由器和模拟兴趣点搜索，不需要 API 密钥：
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## Roadmap
+## 路线图
 
-- [x] Snap meetup coordinates to useful nearby POIs.
-- [x] Segment-projected corridor distance for city/regional routing.
-- [ ] Persistent route-response caching.
-- [ ] Optional road-segment / bike-lane identity checks where providers expose them.
-- [ ] More routing providers.
-- [x] Departure-time synchronization.
-- [ ] Optional web UI / map visualization.
+- [x] 将会合点坐标吸附到附近实用的兴趣点。
+- [x] 使用基于线段投影的走廊距离，支持城市和区域级路线规划。
+- [ ] 持久化路线响应缓存。
+- [ ] 在路线服务商提供相关数据时，支持可选的道路路段或自行车道身份检查。
+- [ ] 支持更多路线服务商。
+- [x] 出发时间同步。
+- [ ] 可选的网页界面或地图可视化。
 
-## License
+## 许可证
 
-MIT
+本项目采用 MIT 许可证。请参阅 [`LICENSE`](LICENSE)；中文参考译文见 [`LICENSE.zh-CN.md`](LICENSE.zh-CN.md)。
 
-## Corridor controls
+## 走廊控制参数
 
 ```bash
 ride-converge ... \
@@ -226,10 +226,10 @@ ride-converge ... \
   --min-shared-segment 600
 ```
 
-- `--sample-spacing`: how densely natural routes are sampled before corridor detection.
-- `--zone-radius`: merges nearby common-corridor samples into one convergence zone.
-- `--validation-candidates`: caps the number of raw zones that receive expensive exact bicycle-route validation.
-- `--min-direction-cosine`: rejects routes whose local forward directions disagree too much. `1` means identical direction, `0` perpendicular, `-1` opposite.
-- `--min-shared-segment`: requires the natural routes to remain spatially close and direction-compatible for at least this many meters after the candidate.
+- `--sample-spacing`：检测走廊前，对自然路线进行采样的密度。
+- `--zone-radius`：将距离较近的共同走廊采样点合并为一个会合区域。
+- `--validation-candidates`：限制接受高成本精确骑行路线验证的原始区域数量。
+- `--min-direction-cosine`：淘汰局部前进方向差异过大的路线。`1` 表示方向完全相同，`0` 表示垂直，`-1` 表示相反。
+- `--min-shared-segment`：要求经过候选点后，自然路线仍保持空间邻近且方向兼容至少指定米数。
 
-Use `--json` to inspect `natural_shared_floor_m`, `route_remaining_spread_m`, `route_corridor_m`, `direction_alignment`, and `contiguous_shared_m`.
+使用 `--json` 可查看 `natural_shared_floor_m`、`route_remaining_spread_m`、`route_corridor_m`、`direction_alignment` 和 `contiguous_shared_m`。

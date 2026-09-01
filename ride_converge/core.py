@@ -70,7 +70,7 @@ def _contiguous_shared_length(
     scan_step_m: float,
     scan_limit_m: float,
 ) -> float:
-    """Estimate how long all natural routes remain close and same-direction after a candidate."""
+    """估算经过候选点后，所有自然路线保持邻近且同向的距离。"""
     max_possible = min(pos.remaining_m for pos in positions)
     limit = min(max_possible, scan_limit_m)
     if limit <= 0:
@@ -128,11 +128,11 @@ def _candidate_metrics(point: Point, direct_routes: list[Route], options: Option
 
 
 def _cluster_corridor_candidates(candidates: list[CorridorCandidate], radius_m: float) -> list[CorridorCandidate]:
-    """Collapse dense samples into convergence zones and keep each zone's earliest point."""
+    """将密集采样点合并为会合区域，并保留每个区域中最早的点。"""
     if radius_m <= 0:
         return candidates
-    # Earliest common progress first. This makes the first point entering a shared corridor
-    # represent the zone instead of letting dozens of later samples consume route calls.
+    # 优先处理最早的共同路段，让首次进入共同走廊的点代表整个区域，
+    # 避免后续大量采样点消耗路线查询次数。
     ranked = sorted(
         candidates,
         key=lambda c: (-c.shared_remaining_floor_m, c.corridor_m, -c.direction_alignment, -c.contiguous_shared_m, c.remaining_spread_m),
@@ -327,23 +327,23 @@ def find_convergence(
 ) -> list[ConvergenceResult]:
     options = options or Options()
     if len(riders) < 2:
-        raise ValueError("At least two riders are required")
+        raise ValueError("至少需要两名骑行者")
     if not (0 <= options.max_detour_ratio <= 1):
-        raise ValueError("max_detour_ratio must be between 0 and 1")
+        raise ValueError("max_detour_ratio 必须介于 0 和 1 之间")
     if options.validation_candidates < 1:
-        raise ValueError("validation_candidates must be >= 1")
+        raise ValueError("validation_candidates 必须大于或等于 1")
     if not (-1 <= options.min_direction_cosine <= 1):
-        raise ValueError("min_direction_cosine must be between -1 and 1")
+        raise ValueError("min_direction_cosine 必须介于 -1 和 1 之间")
     if options.min_contiguous_shared_m < 0:
-        raise ValueError("min_contiguous_shared_m must be >= 0")
+        raise ValueError("min_contiguous_shared_m 必须大于或等于 0")
 
     direct_routes = [provider.bicycle_route(r.origin, destination) for r in riders]
     if any(not r.polyline for r in direct_routes):
-        raise ValueError("Provider must return route polylines for path-first convergence")
+        raise ValueError("路线服务商必须返回路线折线，才能执行路径优先的会合计算")
 
     candidates = _candidate_points(direct_routes, destination, options)
     raw_results: list[ConvergenceResult] = []
-    # Spend expensive route calls only on same-direction, contiguous common-corridor zones.
+    # 只对同向且连续的共同走廊区域执行成本较高的路线查询。
     for candidate in candidates[: options.validation_candidates]:
         result = _evaluate_candidate(
             provider,
@@ -363,8 +363,8 @@ def find_convergence(
 
     if not raw_results:
         raise NoFeasibleConvergence(
-            "No convergence point satisfied route direction, contiguous-corridor, and detour constraints. "
-            "Try increasing --max-detour/--corridor or relaxing --min-direction-cosine/--min-shared-segment."
+            "没有会合点同时满足路线方向、连续走廊和绕行约束。"
+            "可尝试增大 --max-detour/--corridor，或放宽 --min-direction-cosine/--min-shared-segment。"
         )
 
     _sort_results(raw_results)

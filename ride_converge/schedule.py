@@ -46,23 +46,23 @@ def plan_departures(
     uncertainty_ratio: float = 0.10,
     minimum_uncertainty_s: float = 120.0,
 ) -> DeparturePlan:
-    """Back-calculate synchronized departure times for one convergence result.
+    """根据一个会合结果反推同步出发时间。
 
-    ``meetup_at`` is the planned time the group wants to be ready at the meetup point.
-    ``buffer_s`` makes each rider's expected arrival earlier than that time.
+    ``meetup_at`` 是团队计划在会合点准备就绪的时间。
+    ``buffer_s`` 让每位骑行者的预计到达时间早于该时间。
 
-    Navigation durations are estimates, not confidence intervals. ``uncertainty_ratio`` and
-    ``minimum_uncertainty_s`` are therefore only a configurable planning allowance used to
-    show a conservative latest-safe departure time; they are not a provider-guaranteed ETA.
+    导航耗时是估算值，并非置信区间。因此，``uncertainty_ratio`` 和
+    ``minimum_uncertainty_s`` 只是可配置的规划余量，用于给出更保守的稳妥出发时间；
+    它们不是路线服务商保证的预计到达时间。
     """
     if buffer_s < 0:
-        raise ValueError("buffer_s must be >= 0")
+        raise ValueError("buffer_s 必须大于或等于 0")
     if uncertainty_ratio < 0:
-        raise ValueError("uncertainty_ratio must be >= 0")
+        raise ValueError("uncertainty_ratio 必须大于或等于 0")
     if minimum_uncertainty_s < 0:
-        raise ValueError("minimum_uncertainty_s must be >= 0")
+        raise ValueError("minimum_uncertainty_s 必须大于或等于 0")
     if not result.riders:
-        raise ValueError("Convergence result must include at least one rider")
+        raise ValueError("会合结果必须至少包含一名骑行者")
 
     expected_arrival = meetup_at - timedelta(seconds=buffer_s)
     schedules: list[RiderDeparture] = []

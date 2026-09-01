@@ -18,7 +18,7 @@ class PolylinePosition:
 
 
 def direction_unit_vector(polyline: list[Point], position: PolylinePosition) -> tuple[float, float]:
-    """Return the local forward route direction as a unit vector."""
+    """以单位向量形式返回路线在当前位置的前进方向。"""
     if len(polyline) < 2 or position.segment_index < 0:
         return (0.0, 0.0)
     i = min(position.segment_index, len(polyline) - 2)
@@ -42,9 +42,9 @@ def direction_cosine(a: tuple[float, float], b: tuple[float, float]) -> float:
 def point_forward_on_polyline(
     polyline: list[Point], position: PolylinePosition, distance_m: float
 ) -> tuple[Point, PolylinePosition]:
-    """Move forward along a polyline from a projected position by metric distance."""
+    """从投影位置沿路线折线向前移动指定米数。"""
     if not polyline:
-        raise ValueError('polyline must not be empty')
+        raise ValueError('polyline 不能为空')
     if len(polyline) == 1 or distance_m <= 0:
         return position.nearest, position
 
@@ -85,7 +85,7 @@ def haversine_m(a: Point, b: Point) -> float:
 
 
 def _xy_m(point: Point, ref_lat: float) -> tuple[float, float]:
-    """Project lon/lat to a local equirectangular plane in meters."""
+    """将经纬度投影到以米为单位的局部等距圆柱平面。"""
     lat_r = math.radians(point.lat)
     lng_r = math.radians(point.lng)
     ref_r = math.radians(ref_lat)
@@ -93,10 +93,10 @@ def _xy_m(point: Point, ref_lat: float) -> tuple[float, float]:
 
 
 def nearest_position_on_polyline(point: Point, polyline: list[Point]) -> PolylinePosition:
-    """Return exact-ish segment projection and remaining polyline distance.
+    """返回近似精确的线段投影以及路线折线的剩余距离。
 
-    The local equirectangular projection is accurate enough for city-scale route
-    corridors and is materially better than comparing only against polyline vertices.
+    局部等距圆柱投影对于城市级路线走廊已足够精确，
+    并且明显优于仅与路线折线顶点比较的方式。
     """
     if not polyline:
         return PolylinePosition(float("inf"), float("inf"), -1, 0.0, point)
@@ -133,12 +133,12 @@ def nearest_position_on_polyline(point: Point, polyline: list[Point]) -> Polylin
 
 
 def min_distance_to_polyline_points(point: Point, polyline: list[Point]) -> float:
-    # Kept for API compatibility; v0.3 now uses segment projection internally.
+    # 为保持 API 兼容性而保留；v0.3 起内部使用线段投影。
     return nearest_position_on_polyline(point, polyline).distance_m
 
 
 def sample_polyline(polyline: list[Point], spacing_m: float = 1200.0) -> list[Point]:
-    """Sample a route at roughly even metric spacing, including both endpoints."""
+    """以大致均匀的米制间距对路线采样，并包含两个端点。"""
     if len(polyline) <= 1 or spacing_m <= 0:
         return list(polyline)
 

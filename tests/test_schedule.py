@@ -38,10 +38,10 @@ class DeparturePlanTests(unittest.TestCase):
         meet = datetime.fromisoformat("2026-09-05T09:15:00")
         plan = plan_departures(fake_result(), meet, buffer_s=0, uncertainty_ratio=0.10, minimum_uncertainty_s=120)
         by_name = {x.name: x for x in plan.riders}
-        # A ride is 30 minutes, so 10% = 3 minutes.
+        # A 的骑行耗时为 30 分钟，因此 10% 等于 3 分钟。
         self.assertEqual(by_name["A"].uncertainty_s, 180)
         self.assertEqual(by_name["A"].latest_safe_departure_at.isoformat(), "2026-09-05T08:42:00")
-        # B ride is 20 minutes, minimum allowance wins at 2 minutes.
+        # B 的骑行耗时为 20 分钟，因此采用 2 分钟的最小规划余量。
         self.assertEqual(by_name["B"].uncertainty_s, 120)
         self.assertEqual(by_name["B"].latest_safe_departure_at.isoformat(), "2026-09-05T08:53:00")
 

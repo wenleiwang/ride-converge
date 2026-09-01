@@ -22,7 +22,7 @@ class AMapProvider:
     def __init__(self, api_key: str | None = None, timeout_s: float = 15.0):
         self.api_key = api_key or os.getenv("AMAP_API_KEY")
         if not self.api_key:
-            raise ValueError("AMAP_API_KEY is required")
+            raise ValueError("必须设置 AMAP_API_KEY")
         self.timeout_s = timeout_s
         self._route_cache: dict[tuple[Point, Point], Route] = {}
         self._geocode_cache: dict[tuple[str, str | None], Point] = {}
@@ -35,13 +35,13 @@ class AMapProvider:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                 data = json.load(resp)
         except Exception as exc:
-            raise AMapError(f"AMap request failed: {exc}") from exc
+            raise AMapError(f"高德地图请求失败：{exc}") from exc
 
         status = str(data.get("status", ""))
         if status and status != "1":
-            raise AMapError(f"AMap error: {data.get('info')} ({data.get('infocode')})")
+            raise AMapError(f"高德地图返回错误：{data.get('info')}（{data.get('infocode')}）")
         if data.get("errmsg") and str(data.get("errcode", "0")) not in {"0", ""}:
-            raise AMapError(f"AMap error: {data.get('errmsg')} ({data.get('errcode')})")
+            raise AMapError(f"高德地图返回错误：{data.get('errmsg')}（{data.get('errcode')}）")
         return data
 
     def geocode(self, address: str, city: str | None = None) -> Point:
@@ -54,7 +54,7 @@ class AMapProvider:
         data = self._get(self.GEO_URL, params)
         geocodes = data.get("geocodes") or []
         if not geocodes:
-            raise AMapError(f"Could not geocode: {address}")
+            raise AMapError(f"无法解析地址：{address}")
         lng, lat = map(float, geocodes[0]["location"].split(","))
         point = Point(lng, lat)
         self._geocode_cache[key] = point
@@ -105,7 +105,7 @@ class AMapProvider:
             category = poi.get("type") or business.get("tag") or None
             out.append(
                 Place(
-                    name=str(poi.get("name") or "unnamed place"),
+                    name=str(poi.get("name") or "未命名地点"),
                     point=Point(lng, lat),
                     address=str(address) if address else None,
                     category=str(category) if category else None,
@@ -135,7 +135,7 @@ class AMapProvider:
         if isinstance(paths, dict):
             paths = [paths]
         if not paths:
-            raise AMapError(f"No bicycle route: {origin.amap()} -> {destination.amap()}")
+            raise AMapError(f"没有可用的骑行路线：{origin.amap()} -> {destination.amap()}")
         path = paths[0]
         distance = float(path.get("distance") or 0)
         duration = float(path.get("duration") or (path.get("cost") or {}).get("duration") or 0)
@@ -159,7 +159,7 @@ class AMapProvider:
                 if not points or p != points[-1]:
                     points.append(p)
         if not points:
-            raise AMapError("AMap route returned no polyline; check API response/show_fields support")
+            raise AMapError("高德地图路线结果未返回路线折线；请检查 API 响应以及 show_fields 支持情况")
         result = Route(distance_m=distance, duration_s=duration, polyline=points)
         self._route_cache[cache_key] = result
         return result
