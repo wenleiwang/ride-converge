@@ -76,11 +76,13 @@ metadata:
 
 ## 运行随附实现
 
-设置 API 密钥：
+推荐在项目根目录的 `.env` 中设置 API 密钥，程序会自动读取：
 
-```bash
-export AMAP_API_KEY="你的 Web 服务密钥"
+```text
+AMAP_API_KEY=你的高德Web服务密钥
 ```
+
+也可以通过系统环境变量设置；PowerShell 使用 `$env:AMAP_API_KEY = "..."`，Bash 使用 `export AMAP_API_KEY="..."`。
 
 在本地安装：
 
@@ -96,7 +98,7 @@ ride-converge \
   --origin '小李=西二旗地铁站' \
   --origin '小王=望京SOHO' \
   --origin '小张=东直门地铁站' \
-  --destination '北京城市副中心三大文化建筑' \
+  --destination '北京大运河博物馆' \
   --max-detour 0.15 \
   --top 5
 ```

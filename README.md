@@ -51,11 +51,23 @@ C ----------/
 - 高德地图 Web 服务 API 密钥
 - 实时路线规划所需的互联网连接
 
-```bash
-export AMAP_API_KEY="..."
+推荐复制示例文件，并在项目根目录的 `.env` 中填写密钥：
+
+```text
+AMAP_API_KEY=你的高德Web服务密钥
 ```
 
-请勿将密钥提交到版本库。
+程序会自动、静默地读取当前目录或项目根目录下的 `.env`。也可以使用系统环境变量；PowerShell 和 Bash 的写法分别如下：
+
+```powershell
+$env:AMAP_API_KEY = "你的高德Web服务密钥"
+```
+
+```bash
+export AMAP_API_KEY="你的高德Web服务密钥"
+```
+
+`.env` 已被 Git 忽略。请勿打印、公开或提交真实密钥。
 
 ## 安装
 
@@ -73,7 +85,7 @@ ride-converge \
   --origin 'A=西二旗地铁站' \
   --origin 'B=望京SOHO' \
   --origin 'C=东直门地铁站' \
-  --destination '北京城市副中心三大文化建筑' \
+  --destination '北京大运河博物馆' \
   --max-detour 0.15 \
   --corridor 1500 \
   --top 5
@@ -110,7 +122,7 @@ ride-converge \
   --city 北京 \
   --origin 'A=西二旗地铁站' \
   --origin 'B=望京SOHO' \
-  --destination '北京城市副中心三大文化建筑' \
+  --destination '北京大运河博物馆' \
   --meet-at 2026-09-05T09:15 \
   --arrival-buffer 3 \
   --pace-slack 0.10 \
@@ -138,7 +150,7 @@ riders = [
     Rider("A", provider.geocode("西二旗地铁站", "北京")),
     Rider("B", provider.geocode("望京SOHO", "北京")),
 ]
-destination = provider.geocode("北京城市副中心三大文化建筑", "北京")
+destination = provider.geocode("北京大运河博物馆", "北京")
 
 results = find_convergence(
     provider,

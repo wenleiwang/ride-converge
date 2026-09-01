@@ -6,9 +6,9 @@ import re
 import sys
 from datetime import datetime
 
-from .core import Options, find_convergence
+from .core import NoFeasibleConvergence, Options, find_convergence
 from .models import Rider
-from .providers.amap import AMapProvider
+from .providers.amap import AMapError, AMapProvider
 from .schedule import plan_departures
 
 
@@ -103,34 +103,37 @@ def main() -> None:
     parser.add_argument("--json", action="store_true", help="以 JSON 格式输出结构化结果")
     args = parser.parse_args()
 
-    provider = AMapProvider()
-    riders: list[Rider] = []
-    for raw in args.origin:
-        if "=" not in raw:
-            parser.error(f"起点 {raw!r} 格式无效，应使用‘名称=地址’格式")
-        name, address = raw.split("=", 1)
-        riders.append(Rider(name=name.strip(), origin=provider.geocode(address.strip(), args.city)))
-    destination = provider.geocode(args.destination, args.city)
+    try:
+        provider = AMapProvider()
+        riders: list[Rider] = []
+        for raw in args.origin:
+            if "=" not in raw:
+                parser.error(f"起点 {raw!r} 格式无效，应使用‘名称=地址’格式")
+            name, address = raw.split("=", 1)
+            riders.append(Rider(name=name.strip(), origin=provider.geocode(address.strip(), args.city)))
+        destination = provider.geocode(args.destination, args.city)
 
-    keywords = tuple(args.poi_keyword) if args.poi_keyword else Options.poi_keywords
-    results = find_convergence(
-        provider,
-        riders,
-        destination,
-        Options(
-            max_detour_ratio=args.max_detour,
-            route_corridor_m=args.corridor,
-            top_n=args.top,
-            sample_spacing_m=args.sample_spacing,
-            zone_radius_m=args.zone_radius,
-            validation_candidates=args.validation_candidates,
-            min_direction_cosine=args.min_direction_cosine,
-            min_contiguous_shared_m=args.min_shared_segment,
-            snap_to_poi=not args.no_poi,
-            poi_radius_m=args.poi_radius,
-            poi_keywords=keywords,
-        ),
-    )
+        keywords = tuple(args.poi_keyword) if args.poi_keyword else Options.poi_keywords
+        results = find_convergence(
+            provider,
+            riders,
+            destination,
+            Options(
+                max_detour_ratio=args.max_detour,
+                route_corridor_m=args.corridor,
+                top_n=args.top,
+                sample_spacing_m=args.sample_spacing,
+                zone_radius_m=args.zone_radius,
+                validation_candidates=args.validation_candidates,
+                min_direction_cosine=args.min_direction_cosine,
+                min_contiguous_shared_m=args.min_shared_segment,
+                snap_to_poi=not args.no_poi,
+                poi_radius_m=args.poi_radius,
+                poi_keywords=keywords,
+            ),
+        )
+    except (AMapError, NoFeasibleConvergence, ValueError) as exc:
+        parser.exit(1, f"ride-converge：{exc}\n")
 
     meetup_at = None
     if args.meet_at:

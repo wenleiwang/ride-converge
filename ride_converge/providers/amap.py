@@ -4,9 +4,48 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 from ..models import Place, Point, Route
+
+
+def _read_dotenv_value(path: Path, name: str) -> str | None:
+    """从 dotenv 文件读取单个配置值，不输出文件内容。"""
+    try:
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
+    except OSError:
+        return None
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("export "):
+            stripped = stripped[7:].lstrip()
+        key, separator, value = stripped.partition("=")
+        if not separator or key.strip() != name:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        return value or None
+    return None
+
+
+def _dotenv_api_key() -> str | None:
+    """依次在当前目录和项目根目录中查找 AMAP_API_KEY。"""
+    candidates = [Path.cwd() / ".env", Path(__file__).resolve().parents[2] / ".env"]
+    checked: set[Path] = set()
+    for path in candidates:
+        path = path.resolve()
+        if path in checked:
+            continue
+        checked.add(path)
+        value = _read_dotenv_value(path, "AMAP_API_KEY")
+        if value:
+            return value
+    return None
 
 
 class AMapError(RuntimeError):
@@ -20,9 +59,9 @@ class AMapProvider:
     PLACE_AROUND_URL = "https://restapi.amap.com/v5/place/around"
 
     def __init__(self, api_key: str | None = None, timeout_s: float = 15.0):
-        self.api_key = api_key or os.getenv("AMAP_API_KEY")
+        self.api_key = api_key or os.getenv("AMAP_API_KEY") or _dotenv_api_key()
         if not self.api_key:
-            raise ValueError("必须设置 AMAP_API_KEY")
+            raise ValueError("必须设置 AMAP_API_KEY，或在项目根目录的 .env 文件中配置该值")
         self.timeout_s = timeout_s
         self._route_cache: dict[tuple[Point, Point], Route] = {}
         self._geocode_cache: dict[tuple[str, str | None], Point] = {}
