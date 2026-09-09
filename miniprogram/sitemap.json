@@ -1,0 +1,9 @@
+{
+  "desc": "站点地图配置",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

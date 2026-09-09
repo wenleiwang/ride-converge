@@ -1,0 +1,20 @@
+[Unit]
+Description=骑行汇合路线规划服务
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Conda 当前安装在 /root；迁移到专用服务用户后应同步修改这里和 ExecStart。
+User=root
+Group=root
+WorkingDirectory=/opt/ride-converge
+EnvironmentFile=/opt/ride-converge/.env
+ExecStart=/root/miniconda3/envs/ride-converge/bin/python -m ride_converge.web.server --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=3
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

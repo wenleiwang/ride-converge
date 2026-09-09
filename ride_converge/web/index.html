@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="为多名骑行者规划路径优先的会合点，并在地图上查看共同骑行方案。">
+  <title>骑行会合规划</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://tile.openstreetmap.org">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="brand-row"><span class="brand-mark">RC</span><h1>骑行会合规划</h1></div>
+        <p>沿真实骑行路线，找到更早、更顺路的共同出发点。</p>
+      </div>
+      <div id="system-status" class="system-status" aria-live="polite"><span></span>地图服务就绪</div>
+    </header>
+
+    <aside class="planner-panel" aria-label="路线规划表单">
+      <section class="form-section city-section">
+        <div class="section-heading">
+          <div><span class="step">01</span><h2>规划范围</h2></div>
+        </div>
+        <label class="field-label" for="city">城市</label>
+        <input id="city" class="text-input" value="北京" autocomplete="address-level2">
+      </section>
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div><span class="step">02</span><h2>骑行者起点</h2></div>
+          <button id="add-origin" class="text-button" type="button">＋ 添加骑行者</button>
+        </div>
+        <div id="origins" class="origin-list"></div>
+      </section>
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div><span class="step">03</span><h2>共同路线</h2></div>
+          <button id="add-waypoint" class="text-button" type="button">＋ 添加途经点</button>
+        </div>
+        <div id="waypoints" class="waypoint-list"></div>
+        <div class="location-card destination-card" data-location="destination">
+          <div class="location-head"><span class="location-badge destination">D</span><strong>最终目的地</strong><span id="destination-state" class="location-state">待搜索</span></div>
+          <label class="sr-only" for="destination-address">目的地地址</label>
+          <input id="destination-address" class="text-input" placeholder="例如：潭柘寺" autocomplete="off">
+          <div class="location-actions">
+            <button id="search-destination" class="secondary-button" type="button">搜索定位</button>
+            <button id="pick-destination" class="map-pick-button" type="button">地图选点</button>
+          </div>
+          <p id="destination-detail" class="location-detail">输入地点名称后搜索，或直接在地图上选点。</p>
+        </div>
+      </section>
+
+      <details class="options-panel">
+        <summary>高级参数</summary>
+        <div class="option-grid">
+          <label>最大绕行比例<input id="max-detour" type="number" min="0" max="1" step="0.01" value="0.15"></label>
+          <label>走廊宽度（米）<input id="corridor" type="number" min="100" step="100" value="1500"></label>
+          <label>方向一致度<input id="direction" type="number" min="-1" max="1" step="0.05" value="0.65"></label>
+          <label>连续走廊（米）<input id="shared-segment" type="number" min="0" step="100" value="600"></label>
+          <label>方案数量<input id="top-n" type="number" min="1" max="5" step="1" value="3"></label>
+        </div>
+      </details>
+
+      <div class="submit-block">
+        <button id="plan-button" class="primary-button" type="button"><span>生成会合方案</span><b>→</b></button>
+        <p>真实路线计算通常需要几十秒，请勿重复提交。</p>
+      </div>
+    </aside>
+
+    <main class="map-workspace">
+      <div id="map" aria-label="骑行路线地图"></div>
+      <div class="map-toolbar">
+        <button id="fit-map" type="button">显示全部点位</button>
+        <span id="pick-hint">搜索地点后将在地图中标记</span>
+      </div>
+      <div id="loading-panel" class="loading-panel" hidden>
+        <span class="spinner"></span>
+        <strong>正在计算真实骑行路线</strong>
+        <small>正在验证共同走廊、绕行比例和附近兴趣点……</small>
+      </div>
+    </main>
+
+    <section id="results-panel" class="results-panel" aria-label="会合方案" hidden>
+      <div class="results-heading">
+        <div><span class="step">04</span><h2>会合方案</h2><span id="result-count" class="result-count"></span></div>
+        <button id="close-results" type="button" aria-label="收起方案">收起</button>
+      </div>
+      <div id="result-list" class="result-list"></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/app.js"></script>
+</body>
+</html>

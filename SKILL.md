@@ -95,10 +95,10 @@ python -m pip install -e .
 ```bash
 ride-converge \
   --city 北京 \
-  --origin '小李=西二旗地铁站' \
-  --origin '小王=望京SOHO' \
-  --origin '小张=东直门地铁站' \
-  --destination '北京大运河博物馆' \
+  --origin '小李=西单地铁站' \
+  --origin '小王=丰台科技园' \
+  --origin '小张=北京工业大学' \
+  --destination '潭柘寺' \
   --max-detour 0.15 \
   --top 5
 ```

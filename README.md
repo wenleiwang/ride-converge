@@ -82,10 +82,10 @@ python -m pip install -e .
 ```bash
 ride-converge \
   --city 北京 \
-  --origin 'A=西二旗地铁站' \
-  --origin 'B=望京SOHO' \
-  --origin 'C=东直门地铁站' \
-  --destination '北京大运河博物馆' \
+  --origin 'A=西单地铁站' \
+  --origin 'B=丰台科技园' \
+  --origin 'C=北京工业大学' \
+  --destination '潭柘寺' \
   --max-detour 0.15 \
   --corridor 1500 \
   --top 5
@@ -113,6 +113,52 @@ ride-converge ... --no-poi
 ride-converge ... --json
 ```
 
+## Web 页面
+
+项目提供本地 Web 规划页面，支持动态添加骑行者和途经点、上下调整途经点顺序、地址搜索、地图点击选点、调整约束，并在地图中回显起点、最近可行会合点、个人路线和共同骑行路线。途经点按 `M -> W1 -> W2 -> … -> D` 的顺序连接，用于控制会合后团队一起移动的路线。
+
+在项目根目录运行：
+
+```bash
+python -m ride_converge.web.server
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:8765
+```
+
+重新执行 `python -m pip install -e .` 后，也可以使用：
+
+```bash
+ride-converge-web
+```
+
+页面通过本机 Python 服务访问高德地图，`AMAP_API_KEY` 不会发送到浏览器。底图使用 Leaflet 和 OpenStreetMap；高德的 GCJ-02 坐标会在后端转换后再用于底图显示。
+
+## 微信小程序
+
+仓库包含可直接导入微信开发者工具的原生小程序，AppID 为 `wx35c145cb4a63ae54`。支持动态添加骑行者起点、多个有序途经点、最终目的地、地点搜索、地图选点、真实路线规划和多方案地图回显。
+
+```text
+项目根目录
+├── project.config.json        微信开发者工具项目配置
+├── miniprogram/               小程序源码
+├── deploy/nginx/              HTTPS 反向代理模板
+└── deploy/systemd/            Python 后端服务模板
+```
+
+生产接口地址已配置为：
+
+```text
+https://ride-converge.wenlei.wang
+```
+
+小程序不包含高德 Key。地点搜索、逆地理编码和骑行路线均通过上述 HTTPS 域名请求 Python 后端，再由后端读取 `.env` 并调用高德 Web 服务。完整的服务器部署、Nginx 配置、微信合法域名设置、真机测试和提审步骤见 [`references/WECHAT_MINIPROGRAM.md`](references/WECHAT_MINIPROGRAM.md)。
+
+> 域名使用连字符 `ride-converge`，不要使用下划线形式 `ride_converge`。
+
 ### 出发时间同步
 
 如果团队希望在指定的本地时间一起准备就绪：
@@ -120,9 +166,9 @@ ride-converge ... --json
 ```bash
 ride-converge \
   --city 北京 \
-  --origin 'A=西二旗地铁站' \
-  --origin 'B=望京SOHO' \
-  --destination '北京大运河博物馆' \
+  --origin 'A=西单地铁站' \
+  --origin 'B=丰台科技园' \
+  --destination '潭柘寺' \
   --meet-at 2026-09-05T09:15 \
   --arrival-buffer 3 \
   --pace-slack 0.10 \
@@ -147,10 +193,10 @@ from ride_converge.providers import AMapProvider
 
 provider = AMapProvider()
 riders = [
-    Rider("A", provider.geocode("西二旗地铁站", "北京")),
-    Rider("B", provider.geocode("望京SOHO", "北京")),
+    Rider("A", provider.geocode("西单地铁站", "北京")),
+    Rider("B", provider.geocode("丰台科技园", "北京")),
 ]
-destination = provider.geocode("北京大运河博物馆", "北京")
+destination = provider.geocode("潭柘寺", "北京")
 
 results = find_convergence(
     provider,

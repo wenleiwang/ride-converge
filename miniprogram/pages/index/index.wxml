@@ -1,0 +1,140 @@
+<view class="page" style="height: {{viewportHeight}}px;">
+  <map id="routeMap" class="map" style="height: {{mapHeight}}px;" latitude="{{mapCenter.latitude}}" longitude="{{mapCenter.longitude}}" scale="{{mapScale}}" markers="{{markers}}" polyline="{{polylines}}" bindtap="onMapTap" enable-rotate="{{false}}" show-scale></map>
+
+  <view class="map-header" wx:if="{{!mapPicking}}">
+    <button class="search-entry" data-kind="destination" bindtap="openSearch">
+      <text class="city">{{city}}</text><view class="search-icon"></view>
+      <text class="search-placeholder">{{destination.point ? destination.address : '搜索目的地，约上骑友一起出发'}}</text>
+    </button>
+  </view>
+  <view class="pick-header" wx:else>为{{searchTitle}}选点 · 点击地图上的位置</view>
+
+  <view class="map-tools" wx:if="{{mapHeight >= 240}}">
+    <button class="tool" aria-label="放大地图" bindtap="zoomIn">＋</button>
+    <button class="tool tool-divider" aria-label="缩小地图" bindtap="zoomOut">−</button>
+    <button wx:if="{{!mapPicking}}" class="tool overview" bindtap="fitMap">全览</button>
+  </view>
+
+  <view class="sheet" style="height: {{sheetHeight}}px;">
+    <view wx:if="{{!mapPicking}}" class="sheet-handle" bindtouchstart="onSheetTouchStart" catchtouchmove="onSheetTouchMove" bindtouchend="onSheetTouchEnd" bindtouchcancel="onSheetTouchCancel" bindtap="toggleSheet" aria-label="上下拖动或点击展开收起面板"><view class="handle-bar"></view></view>
+
+    <block wx:if="{{mapPicking}}">
+      <view class="pick-content">
+        <view class="pick-address">{{searching ? '正在识别位置…' : pickedPlace ? pickedPlace.address : '点击地图选择一个位置'}}</view>
+        <text class="error" wx:if="{{error}}">{{error}}</text>
+        <view class="pick-actions"><button class="secondary" bindtap="cancelMapPicking">返回搜索</button><button class="primary" disabled="{{!pickedPlace || searching}}" bindtap="confirmMapPick">确认此位置</button></view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="sheet-heading" bindtouchstart="onSheetTouchStart" catchtouchmove="onSheetTouchMove" bindtouchend="onSheetTouchEnd" bindtouchcancel="onSheetTouchCancel">
+        <view class="heading-main"><text class="mode-badge">骑行</text><text class="heading-title">{{panel === 'results' ? '汇合方案' : '一起骑行'}}</text><text class="muted">{{origins.length}} 人同行</text></view>
+        <view class="heading-actions">
+          <button wx:if="{{panel === 'results'}}" class="text-button" bindtap="editRoute">修改路线</button>
+          <button wx:else class="text-button" bindtap="expandSheet">{{sheetMode === 'expanded' ? '半屏' : '展开'}}</button>
+        </view>
+      </view>
+
+      <scroll-view wx:if="{{panel === 'edit' && sheetMode !== 'collapsed'}}" class="sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="section-title"><text>大家从哪里出发</text><button class="text-button" bindtap="addOrigin" disabled="{{origins.length >= 8}}">＋ 添加骑友</button></view>
+        <view class="route-list">
+          <view wx:for="{{origins}}" wx:key="id" class="route-row">
+            <input class="rider-name" value="{{item.name}}" data-index="{{index}}" bindinput="onOriginNameInput" maxlength="12" aria-label="骑友名称" />
+            <view class="place-entry" data-kind="origin" data-index="{{index}}" bindtap="openSearch">
+              <text class="place-name {{!item.address ? 'placeholder' : ''}}">{{item.address || '点击选择起点'}}</text>
+              <text class="place-status {{item.point ? 'located' : ''}}">{{item.point ? '已选定' : '点击搜索并确认'}}<text class="chevron"> ›</text></text>
+            </view>
+            <button wx:if="{{origins.length > 2}}" class="remove" data-index="{{index}}" bindtap="removeOrigin" aria-label="删除骑友">−</button>
+          </view>
+        </view>
+
+        <view class="section-title"><text>汇合后一起经过</text><button class="text-button" bindtap="addWaypoint" disabled="{{waypoints.length >= 8}}">＋ 途经点</button></view>
+        <view class="route-list shared-list">
+          <view wx:for="{{waypoints}}" wx:key="id" class="route-row waypoint-row">
+            <view class="route-dot via-dot">{{index + 1}}</view>
+            <view class="place-entry" data-kind="waypoint" data-index="{{index}}" bindtap="openSearch">
+              <text class="place-name">{{item.address || '点击选择途经点'}}</text>
+              <text class="place-status {{item.point ? 'located' : ''}}">{{item.point ? '已选定' : '点击搜索并确认'}}</text>
+            </view>
+            <view class="reorder">
+              <button disabled="{{index === 0}}" class="order-button" data-index="{{index}}" data-step="-1" bindtap="moveWaypoint" aria-label="途经点上移">↑</button>
+              <button disabled="{{index === waypoints.length - 1}}" class="order-button" data-index="{{index}}" data-step="1" bindtap="moveWaypoint" aria-label="途经点下移">↓</button>
+            </view>
+            <button class="remove" data-index="{{index}}" bindtap="removeWaypoint" aria-label="删除途经点">−</button>
+          </view>
+          <view class="route-row">
+            <view class="route-dot end-dot">终</view>
+            <view class="place-entry" data-kind="destination" bindtap="openSearch">
+              <text class="place-name">{{destination.address || '点击选择最终目的地'}}</text>
+              <text class="place-status {{destination.point ? 'located' : ''}}">{{destination.point ? '已选定' : '点击搜索并确认'}}<text class="chevron"> ›</text></text>
+            </view>
+          </view>
+        </view>
+        <text class="route-hint">按途经点顺序一起骑行，终点保持不变</text>
+
+        <button class="settings-toggle" bindtap="toggleOptions"><text>路线偏好</text><text class="muted">最近公平汇合 · {{optionsOpen ? '收起' : '设置'}}</text></button>
+        <view wx:if="{{optionsOpen}}" class="options">
+          <label><text>最大绕行比例</text><input type="digit" value="{{options.maxDetour}}" data-field="maxDetour" bindinput="onOptionInput" /></label>
+          <label><text>走廊宽度 / 米</text><input type="number" value="{{options.corridor}}" data-field="corridor" bindinput="onOptionInput" /></label>
+          <label><text>方案数量</text><input type="number" value="{{options.top}}" data-field="top" bindinput="onOptionInput" /></label>
+          <text class="option-note">0.15 表示最多绕行 15%，优先让最远的骑友也少骑一些。</text>
+        </view>
+        <text wx:if="{{error}}" class="error">{{error}}</text>
+        <view class="attribution">地点与骑行路线由高德地图服务提供</view>
+      </scroll-view>
+
+      <scroll-view wx:if="{{panel === 'results' && sheetMode !== 'collapsed'}}" class="sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="result-tabs">
+          <button wx:for="{{results}}" wx:key="id" class="result-tab {{selectedResult === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectResult">{{item.isFallback ? '集合方案' : index === 0 ? '优先推荐' : '方案 ' + (index + 1)}}</button>
+        </view>
+        <swiper class="result-swiper" current="{{selectedResult}}" bindchange="onResultChange" duration="250">
+          <swiper-item wx:for="{{results}}" wx:key="id">
+            <view class="result-card">
+              <view class="result-tag">{{item.isFallback ? '分别抵达这里，再一起出发' : '让最远的骑友，也更近一点'}}</view>
+              <text class="result-place">{{item.label}}</text>
+              <text class="result-address">{{item.address || '路线汇合点'}}</text>
+              <view class="metrics">
+                <view><text class="metric-value blue">{{item.maxMeetText}}</text><text class="metric-label">最远会合距离</text></view>
+                <view><text class="metric-value">{{item.sharedText}}</text><text class="metric-label">共同骑行</text></view>
+                <view><text class="metric-value">{{item.detourText}}</text><text class="metric-label">最大绕行</text></view>
+              </view>
+            </view>
+          </swiper-item>
+        </swiper>
+        <view class="legend"><view wx:for="{{legend}}" wx:key="name"><text class="line-dot" style="background: {{item.color}};"></text>{{item.name}}</view><view wx:if="{{activeResult.hasSharedRoute}}"><text class="line-dot shared-line"></text>共同路段</view></view>
+        <view wx:if="{{activeResult.isFallback}}" class="fallback-stage">第一段 · 各自前往 {{activeResult.label}}</view>
+        <view class="rider-details">
+          <view wx:for="{{activeResult.riders}}" wx:key="name"><text class="rider-label"><text class="small-dot" style="background: {{item.color}};"></text>{{item.name}} → 汇合点</text><text>{{item.distance}}</text></view>
+        </view>
+        <view wx:if="{{activeResult.isFallback}}" class="fallback-stage">{{activeResult.hasSharedRoute ? '第二段 · 汇合后共同骑行：' + activeResult.sharedStops : '在终点集合，无后续共同路段'}}</view>
+        <view class="attribution">左右滑动切换方案 · 路线由高德地图服务提供</view>
+      </scroll-view>
+
+      <view class="sheet-footer">
+        <block wx:if="{{panel === 'results'}}"><button class="secondary" bindtap="editRoute">修改路线</button><button class="primary" bindtap="toggleSheet">{{sheetMode === 'collapsed' ? '查看方案详情' : '收起面板看地图'}}</button></block>
+        <block wx:else><button class="secondary" bindtap="toggleSheet">{{sheetMode === 'collapsed' ? '展开路线' : '看地图'}}</button><button class="primary" loading="{{planning}}" disabled="{{planning}}" bindtap="generatePlan">{{planning ? '正在计算真实路线' : '查找最近汇合方案'}}</button></block>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{searchOpen}}" class="search-page">
+    <view class="search-nav"><button class="back-button" bindtap="closeSearch">‹</button><text>{{searchTitle}}</text></view>
+    <view class="search-box">
+      <input class="city-input" value="{{searchCity}}" bindinput="onCityInput" placeholder="城市" maxlength="40" />
+      <input class="query-input" value="{{searchQuery}}" bindinput="onSearchInput" bindconfirm="searchPlace" confirm-type="search" placeholder="搜索地点、地铁站、地址" maxlength="80" focus />
+      <button wx:if="{{searchQuery}}" class="clear-button" bindtap="clearQuery" aria-label="清空搜索">×</button>
+      <button class="search-submit" bindtap="searchPlace" loading="{{searching}}">搜索</button>
+    </view>
+    <button class="map-pick-entry" bindtap="startMapPicking"><view class="pin-icon"></view><text>在地图上选点</text><text class="chevron">›</text></button>
+    <view class="search-summary">{{searching ? '正在搜索高德地点…' : searched ? '搜索结果 · 点击一项即可选定（最多 20 条）' : '输入关键词后搜索，选择准确的位置'}}</view>
+    <scroll-view class="search-list" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{searchResults}}" wx:key="id" class="search-item" data-index="{{index}}" bindtap="chooseSearchResult">
+        <view class="poi-number">{{index + 1}}</view><view class="poi-content"><text class="poi-name">{{item.label}}</text><text class="poi-address">{{item.address}}</text><text class="poi-category">{{item.category}}</text></view><text class="poi-select">选择</text>
+      </view>
+      <view wx:if="{{error}}" class="search-empty"><text>{{error}}</text><button class="text-button" bindtap="searchPlace">重新搜索</button></view>
+      <view wx:elif="{{searched && !searchResults.length && !searching}}" class="search-empty">没有找到相关地点<text>试试更换关键词或城市，也可以在地图上选点。</text></view>
+    </scroll-view>
+    <view class="search-source">高德地图地点搜索 · 仅在你选择后保存位置</view>
+  </view>
+  <view wx:if="{{planning}}" class="busy-mask" catchtouchmove="noop"><view class="busy-card"><view class="busy-spinner"></view><text>正在计算真实骑行路线</text><text class="muted">比较大家的距离，寻找合适的汇合点</text></view></view>
+</view>

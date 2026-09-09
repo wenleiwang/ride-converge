@@ -57,6 +57,7 @@ class AMapProvider:
     REGEO_URL = "https://restapi.amap.com/v3/geocode/regeo"
     BICYCLE_URL = "https://restapi.amap.com/v5/direction/bicycling"
     PLACE_AROUND_URL = "https://restapi.amap.com/v5/place/around"
+    PLACE_TEXT_URL = "https://restapi.amap.com/v5/place/text"
 
     def __init__(self, api_key: str | None = None, timeout_s: float = 15.0):
         self.api_key = api_key or os.getenv("AMAP_API_KEY") or _dotenv_api_key()
@@ -73,8 +74,9 @@ class AMapProvider:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                 data = json.load(resp)
-        except Exception as exc:
-            raise AMapError(f"高德地图请求失败：{exc}") from exc
+        except Exception:
+            # 网络异常可能携带含 Key 的完整请求地址，不向客户端或日志透出。
+            raise AMapError("高德地图请求失败，请检查网络连接或服务状态") from None
 
         status = str(data.get("status", ""))
         if status and status != "1":
@@ -98,6 +100,41 @@ class AMapProvider:
         point = Point(lng, lat)
         self._geocode_cache[key] = point
         return point
+
+    def search_places(self, query: str, city: str, limit: int = 20) -> list[Place]:
+        """返回供用户选择的地点列表，不自动采用第一条结果。"""
+        data = self._get(self.PLACE_TEXT_URL, {
+            "keywords": query, "region": city, "city_limit": "true",
+            "page_size": min(25, max(1, int(limit))), "page_num": 1,
+        })
+        places: list[Place] = []
+        seen: set[tuple[str, Point]] = set()
+        pois = data.get("pois") or []
+        if isinstance(pois, dict):
+            pois = [pois]
+        for poi in pois:
+            if not isinstance(poi, dict):
+                continue
+            try:
+                lng, lat = map(float, str(poi.get("location") or "").split(","))
+                if not (-180 <= lng <= 180 and -90 <= lat <= 90):
+                    continue
+            except (ValueError, TypeError):
+                continue
+            name = str(poi.get("name") or "未命名地点")
+            point = Point(lng, lat)
+            if (name, point) in seen:
+                continue
+            seen.add((name, point))
+            address_parts: list[str] = []
+            for field in ("pname", "cityname", "adname", "address"):
+                value = poi.get(field)
+                if isinstance(value, str) and value and (not address_parts or address_parts[-1] != value):
+                    address_parts.append(value)
+            address = "".join(address_parts)
+            places.append(Place(name=name, point=point, address=address or city,
+                                category=poi.get("type") or None, provider_id=poi.get("id") or None))
+        return places
 
     def reverse_geocode(self, point: Point) -> str | None:
         data = self._get(self.REGEO_URL, {"location": point.amap(), "radius": 500, "extensions": "base"})

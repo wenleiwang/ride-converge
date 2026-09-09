@@ -18,6 +18,10 @@ classifiers = [
 
 [project.scripts]
 ride-converge = "ride_converge.cli:main"
+ride-converge-web = "ride_converge.web.server:main"
+
+[tool.setuptools.package-data]
+ride_converge = ["web/*.html", "web/*.css", "web/*.js"]
 
 [tool.setuptools.packages.find]
 include = ["ride_converge*"]

@@ -1,11 +1,11 @@
 {
   "city": "北京",
   "origins": [
-    {"name": "A", "address": "西二旗地铁站"},
-    {"name": "B", "address": "望京SOHO"},
-    {"name": "C", "address": "东直门地铁站"}
+    {"name": "A", "address": "西单地铁站"},
+    {"name": "B", "address": "丰台科技园"},
+    {"name": "C", "address": "北京工业大学"}
   ],
-  "destination": "北京大运河博物馆",
+  "destination": "潭柘寺",
   "max_detour_ratio": 0.15,
   "route_corridor_m": 1500,
   "top_n": 5
